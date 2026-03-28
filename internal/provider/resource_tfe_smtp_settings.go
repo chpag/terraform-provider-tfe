@@ -43,14 +43,14 @@ func (v smtpSettingsValidator) ValidateResource(ctx context.Context, req resourc
 
 	// If SMTP is enabled, host and sender must be provided
 	if !data.Enabled.IsNull() && data.Enabled.ValueBool() {
-		if data.Host.IsNull() || data.Host.ValueString() == "" {
+		if data.Host.IsNull() {
 			resp.Diagnostics.AddAttributeError(
 				path.Root("host"),
 				"Missing required attribute",
 				"The attribute 'host' is required when 'enabled' is true.",
 			)
 		}
-		if data.Sender.IsNull() || data.Sender.ValueString() == "" {
+		if data.Sender.IsNull() {
 			resp.Diagnostics.AddAttributeError(
 				path.Root("sender"),
 				"Missing required attribute",
@@ -60,10 +60,11 @@ func (v smtpSettingsValidator) ValidateResource(ctx context.Context, req resourc
 	}
 
 	// If auth is plain or login, username and password must be provided
+	// This validation applies regardless of enabled state to ensure configuration consistency
 	if !data.Auth.IsNull() {
 		authType := data.Auth.ValueString()
 		if authType == string(tfe.SMTPAuthPlain) || authType == string(tfe.SMTPAuthLogin) {
-			if data.Username.IsNull() || data.Username.ValueString() == "" {
+			if data.Username.IsNull() {
 				resp.Diagnostics.AddAttributeError(
 					path.Root("username"),
 					"Missing required attribute",
@@ -71,8 +72,8 @@ func (v smtpSettingsValidator) ValidateResource(ctx context.Context, req resourc
 				)
 			}
 			// Check both password and password_wo
-			hasPassword := !data.Password.IsNull() && data.Password.ValueString() != ""
-			hasPasswordWO := !data.PasswordWO.IsNull() && data.PasswordWO.ValueString() != ""
+			hasPassword := !data.Password.IsNull() && !data.Password.IsUnknown()
+			hasPasswordWO := !data.PasswordWO.IsNull() && !data.PasswordWO.IsUnknown()
 			if !hasPassword && !hasPasswordWO {
 				resp.Diagnostics.AddAttributeError(
 					path.Root("password"),
@@ -192,6 +193,9 @@ func (r *resourceTFESMTPSettings) Schema(ctx context.Context, req resource.Schem
 			"host": schema.StringAttribute{
 				Description: "The hostname of the SMTP server.",
 				Optional:    true,
+				Validators: []validator.String{
+					stringvalidator.LengthAtLeast(1),
+				},
 			},
 			"port": schema.Int64Attribute{
 				Description: "The port of the SMTP server.",
@@ -202,6 +206,9 @@ func (r *resourceTFESMTPSettings) Schema(ctx context.Context, req resource.Schem
 			"sender": schema.StringAttribute{
 				Description: "The desired sender email address.",
 				Optional:    true,
+				Validators: []validator.String{
+					stringvalidator.LengthAtLeast(1),
+				},
 			},
 			"auth": schema.StringAttribute{
 				Description: "The authentication type. Valid values are 'none', 'plain', and 'login'.",
@@ -219,11 +226,17 @@ func (r *resourceTFESMTPSettings) Schema(ctx context.Context, req resource.Schem
 			"username": schema.StringAttribute{
 				Description: "The username used to authenticate to the SMTP server. Required if auth is 'login' or 'plain'.",
 				Optional:    true,
+				Validators: []validator.String{
+					stringvalidator.LengthAtLeast(1),
+				},
 			},
 			"password": schema.StringAttribute{
 				Description: "The password used to authenticate to the SMTP server. Required if auth is 'login' or 'plain'. This value is write-only.",
 				Optional:    true,
 				Sensitive:   true,
+				Validators: []validator.String{
+					stringvalidator.LengthAtLeast(1),
+				},
 			},
 			"password_wo": schema.StringAttribute{
 				Description: "**Deprecated** Use password instead. This attribute will be removed in a future version.",
@@ -232,6 +245,7 @@ func (r *resourceTFESMTPSettings) Schema(ctx context.Context, req resource.Schem
 				WriteOnly:   true,
 				Validators: []validator.String{
 					stringvalidator.ConflictsWith(path.MatchRoot("password")),
+					stringvalidator.LengthAtLeast(1),
 				},
 			},
 			"test_email_address": schema.StringAttribute{

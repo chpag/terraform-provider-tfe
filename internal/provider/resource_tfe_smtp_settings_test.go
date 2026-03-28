@@ -6,6 +6,7 @@ package provider
 import (
 	"errors"
 	"fmt"
+	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
@@ -164,6 +165,47 @@ func TestAccTFESMTPSettings_omnibus(t *testing.T) {
 			},
 		})
 	})
+
+	t.Run("validation errors", func(t *testing.T) {
+		resource.Test(t, resource.TestCase{
+			PreCheck:                 func() { testAccPreCheck(t) },
+			ProtoV6ProviderFactories: testAccMuxedProviders,
+			Steps: []resource.TestStep{
+				{
+					Config:      testAccTFESMTPSettings_enabledWithoutHost(),
+					ExpectError: regexp.MustCompile("The attribute 'host' is required when 'enabled' is true"),
+				},
+				{
+					Config:      testAccTFESMTPSettings_enabledWithoutSender(),
+					ExpectError: regexp.MustCompile("The attribute 'sender' is required when 'enabled' is true"),
+				},
+				{
+					Config:      testAccTFESMTPSettings_plainAuthWithoutUsername(),
+					ExpectError: regexp.MustCompile("The attribute 'username' is required when 'auth' is 'plain'"),
+				},
+				{
+					Config:      testAccTFESMTPSettings_plainAuthWithoutPassword(),
+					ExpectError: regexp.MustCompile("Either 'password' or 'password_wo' is required when 'auth' is 'plain'"),
+				},
+				{
+					Config:      testAccTFESMTPSettings_loginAuthWithoutUsername(),
+					ExpectError: regexp.MustCompile("The attribute 'username' is required when 'auth' is 'login'"),
+				},
+				{
+					Config:      testAccTFESMTPSettings_loginAuthWithoutPassword(),
+					ExpectError: regexp.MustCompile("Either 'password' or 'password_wo' is required when 'auth' is 'login'"),
+				},
+				{
+					Config:      testAccTFESMTPSettings_emptyHost(),
+					ExpectError: regexp.MustCompile("Attribute host string length must be at least 1"),
+				},
+				{
+					Config:      testAccTFESMTPSettings_emptyUsername(),
+					ExpectError: regexp.MustCompile("Attribute username string length must be at least 1"),
+				},
+			},
+		})
+	})
 }
 
 func testAccTFESMTPSettingsDestroy(_ *terraform.State) error {
@@ -233,6 +275,90 @@ func testAccTFESMTPSettings_disabled() string {
 	return `
 resource "tfe_smtp_settings" "foobar" {
   enabled = false
+}`
+}
+
+func testAccTFESMTPSettings_enabledWithoutHost() string {
+	return `
+resource "tfe_smtp_settings" "foobar" {
+  enabled = true
+  sender  = "terraform@example.com"
+  auth    = "none"
+}`
+}
+
+func testAccTFESMTPSettings_enabledWithoutSender() string {
+	return `
+resource "tfe_smtp_settings" "foobar" {
+  enabled = true
+  host    = "smtp.example.com"
+  auth    = "none"
+}`
+}
+
+func testAccTFESMTPSettings_plainAuthWithoutUsername() string {
+	return `
+resource "tfe_smtp_settings" "foobar" {
+  enabled  = true
+  host     = "smtp.example.com"
+  sender   = "terraform@example.com"
+  auth     = "plain"
+  password = "test_password"
+}`
+}
+
+func testAccTFESMTPSettings_plainAuthWithoutPassword() string {
+	return `
+resource "tfe_smtp_settings" "foobar" {
+  enabled  = true
+  host     = "smtp.example.com"
+  sender   = "terraform@example.com"
+  auth     = "plain"
+  username = "smtp_user"
+}`
+}
+
+func testAccTFESMTPSettings_loginAuthWithoutUsername() string {
+	return `
+resource "tfe_smtp_settings" "foobar" {
+  enabled  = true
+  host     = "smtp.example.com"
+  sender   = "terraform@example.com"
+  auth     = "login"
+  password = "test_password"
+}`
+}
+
+func testAccTFESMTPSettings_loginAuthWithoutPassword() string {
+	return `
+resource "tfe_smtp_settings" "foobar" {
+  enabled  = true
+  host     = "smtp.example.com"
+  sender   = "terraform@example.com"
+  auth     = "login"
+  username = "smtp_user"
+}`
+}
+
+func testAccTFESMTPSettings_emptyHost() string {
+	return `
+resource "tfe_smtp_settings" "foobar" {
+  enabled = true
+  host    = ""
+  sender  = "terraform@example.com"
+  auth    = "none"
+}`
+}
+
+func testAccTFESMTPSettings_emptyUsername() string {
+	return `
+resource "tfe_smtp_settings" "foobar" {
+  enabled  = true
+  host     = "smtp.example.com"
+  sender   = "terraform@example.com"
+  auth     = "plain"
+  username = ""
+  password = "test_password"
 }`
 }
 
