@@ -1,5 +1,9 @@
 ## Unreleased
 
+FEATURES:
+* **New Resource**: `tfe_smtp_settings` - Manage SMTP settings for Terraform Enterprise
+* **New Data Source**: `tfe_smtp_settings` - Read SMTP settings configuration
+
 ## v0.75.0
 
 FEATURES:
