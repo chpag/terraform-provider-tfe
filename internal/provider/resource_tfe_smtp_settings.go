@@ -22,15 +22,78 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
+// smtpSettingsValidator validates SMTP settings configuration
+type smtpSettingsValidator struct{}
+
+func (v smtpSettingsValidator) Description(ctx context.Context) string {
+	return "Validates SMTP settings configuration"
+}
+
+func (v smtpSettingsValidator) MarkdownDescription(ctx context.Context) string {
+	return "Validates SMTP settings configuration"
+}
+
+func (v smtpSettingsValidator) ValidateResource(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
+	var data modelTFESMTPSettings
+
+	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// If SMTP is enabled, host and sender must be provided
+	if !data.Enabled.IsNull() && data.Enabled.ValueBool() {
+		if data.Host.IsNull() || data.Host.ValueString() == "" {
+			resp.Diagnostics.AddAttributeError(
+				path.Root("host"),
+				"Missing required attribute",
+				"The attribute 'host' is required when 'enabled' is true.",
+			)
+		}
+		if data.Sender.IsNull() || data.Sender.ValueString() == "" {
+			resp.Diagnostics.AddAttributeError(
+				path.Root("sender"),
+				"Missing required attribute",
+				"The attribute 'sender' is required when 'enabled' is true.",
+			)
+		}
+	}
+
+	// If auth is plain or login, username and password must be provided
+	if !data.Auth.IsNull() {
+		authType := data.Auth.ValueString()
+		if authType == string(tfe.SMTPAuthPlain) || authType == string(tfe.SMTPAuthLogin) {
+			if data.Username.IsNull() || data.Username.ValueString() == "" {
+				resp.Diagnostics.AddAttributeError(
+					path.Root("username"),
+					"Missing required attribute",
+					fmt.Sprintf("The attribute 'username' is required when 'auth' is '%s'.", authType),
+				)
+			}
+			// Check both password and password_wo
+			hasPassword := !data.Password.IsNull() && data.Password.ValueString() != ""
+			hasPasswordWO := !data.PasswordWO.IsNull() && data.PasswordWO.ValueString() != ""
+			if !hasPassword && !hasPasswordWO {
+				resp.Diagnostics.AddAttributeError(
+					path.Root("password"),
+					"Missing required attribute",
+					fmt.Sprintf("Either 'password' or 'password_wo' is required when 'auth' is '%s'.", authType),
+				)
+			}
+		}
+	}
+}
+
 const (
 	smtpDefaultPort int64 = 25
 )
 
 // Ensure the implementation satisfies the expected interfaces.
 var (
-	_ resource.Resource                = &resourceTFESMTPSettings{}
-	_ resource.ResourceWithConfigure   = &resourceTFESMTPSettings{}
-	_ resource.ResourceWithImportState = &resourceTFESMTPSettings{}
+	_ resource.Resource                     = &resourceTFESMTPSettings{}
+	_ resource.ResourceWithConfigure        = &resourceTFESMTPSettings{}
+	_ resource.ResourceWithImportState      = &resourceTFESMTPSettings{}
+	_ resource.ResourceWithConfigValidators = &resourceTFESMTPSettings{}
 )
 
 // NewSMTPSettingsResource is a helper function to simplify the provider implementation.
@@ -79,6 +142,13 @@ func modelFromTFEAdminSMTPSettings(v *tfe.AdminSMTPSetting, password types.Strin
 	}
 
 	return m
+}
+
+// ConfigValidators implements resource.ResourceWithConfigValidators
+func (r *resourceTFESMTPSettings) ConfigValidators(ctx context.Context) []resource.ConfigValidator {
+	return []resource.ConfigValidator{
+		smtpSettingsValidator{},
+	}
 }
 
 // Configure implements resource.ResourceWithConfigure
