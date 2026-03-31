@@ -50,7 +50,7 @@ func TestAccTFESMTPSettingsDataSource_withResource(t *testing.T) {
 					resource.TestCheckResourceAttr("tfe_smtp_settings.test", "sender", "terraform@example.com"),
 					resource.TestCheckResourceAttr("tfe_smtp_settings.test", "auth", "plain"),
 					resource.TestCheckResourceAttr("tfe_smtp_settings.test", "username", "smtp_user"),
-					
+
 					// Check data source attributes match resource
 					resource.TestCheckResourceAttr("data.tfe_smtp_settings.foobar", "id", "smtp"),
 					resource.TestCheckResourceAttr("data.tfe_smtp_settings.foobar", "enabled", "true"),
@@ -59,7 +59,7 @@ func TestAccTFESMTPSettingsDataSource_withResource(t *testing.T) {
 					resource.TestCheckResourceAttr("data.tfe_smtp_settings.foobar", "sender", "terraform@example.com"),
 					resource.TestCheckResourceAttr("data.tfe_smtp_settings.foobar", "auth", "plain"),
 					resource.TestCheckResourceAttr("data.tfe_smtp_settings.foobar", "username", "smtp_user"),
-					
+
 					// Password should never be returned in data source
 					resource.TestCheckNoResourceAttr("data.tfe_smtp_settings.foobar", "password"),
 				),
@@ -90,5 +90,3 @@ data "tfe_smtp_settings" "foobar" {
   depends_on = [tfe_smtp_settings.test]
 }`
 }
-
-// Made with Bob

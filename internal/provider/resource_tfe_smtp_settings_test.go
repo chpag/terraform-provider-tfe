@@ -213,13 +213,13 @@ func testAccTFESMTPSettingsDestroy(_ *terraform.State) error {
 	if err != nil {
 		return fmt.Errorf("failed to read SMTP Settings: %w", err)
 	}
-	
+
 	// SMTP settings cannot be deleted, only disabled
 	// So we check if they are disabled after destroy
 	if settings.Enabled {
 		return errors.New("SMTP settings are still enabled")
 	}
-	
+
 	return nil
 }
 
@@ -361,5 +361,3 @@ resource "tfe_smtp_settings" "foobar" {
   password = "test_password"
 }`
 }
-
-// Made with Bob

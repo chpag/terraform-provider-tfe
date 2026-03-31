@@ -123,5 +123,3 @@ func (d *dataSourceTFESMTPSettings) Read(ctx context.Context, req datasource.Rea
 	// Save data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
-
-// Made with Bob

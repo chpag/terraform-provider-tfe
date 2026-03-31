@@ -411,5 +411,3 @@ func (r *resourceTFESMTPSettings) ImportState(ctx context.Context, req resource.
 	// The ID is always "smtp" for SMTP settings
 	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
 }
-
-// Made with Bob
