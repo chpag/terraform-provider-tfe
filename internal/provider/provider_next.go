@@ -139,6 +139,7 @@ func (p *frameworkProvider) Configure(ctx context.Context, req provider.Configur
 func (p *frameworkProvider) Actions(ctx context.Context) []func() action.Action {
 	return []func() action.Action{
 		NewQueryRunAction,
+		NewVerifyRegistryProviderVersionAction,
 	}
 }
 
